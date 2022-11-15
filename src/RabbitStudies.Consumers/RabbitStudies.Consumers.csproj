@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-RabbitStudies-068a015f-9a8f-4441-80bd-c5de88e4cd9a</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+	  <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0" />
+	  <PackageReference Include="RabbitMQ.Client" Version="6.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RabbitStudies.Contracts\RabbitStudies.Contracts.csproj" />
+    <ProjectReference Include="..\RabbitStudies.RabbitMq\RabbitStudies.RabbitMq.csproj" />
+  </ItemGroup>
+</Project>
