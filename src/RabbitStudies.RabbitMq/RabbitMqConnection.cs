@@ -8,18 +8,6 @@ public class RabbitMqConnection
 {
     private readonly IConnectionFactory _factory;
     private readonly object _connectionLocker = new();
-    private static IEnumerable<TimeSpan> _sleepsBetweenRetries = new List<TimeSpan>
-    {
-        TimeSpan.FromSeconds(1),
-        TimeSpan.FromSeconds(2),
-        TimeSpan.FromSeconds(3),
-        TimeSpan.FromSeconds(5),
-        TimeSpan.FromSeconds(8),
-    };
-
-    private readonly RetryPolicy _retryPolicy = Policy
-        .Handle<Exception>()
-        .WaitAndRetry(sleepDurations: _sleepsBetweenRetries);
 
     private IConnection _connection;
 
@@ -29,22 +17,28 @@ public class RabbitMqConnection
         _connection = ObterConexao();
     }
 
-    public IConnection Connection => _retryPolicy.Execute(() => ObterConexao());
+    public IConnection Connection => _retryPolicy.Execute(ObterConexao);
 
     private IConnection ObterConexao()
     {
-        if (_connection is not { IsOpen: true })
+        if (_connection is { IsOpen: true }) return _connection;
+        lock (_connectionLocker)
         {
-            lock (_connectionLocker)
-            {
-                if (_connection is not { IsOpen: true })
-                {
-                    _connection?.Dispose();
-                    _connection = _factory.CreateConnection();
-                }
-            }
+            if (_connection is { IsOpen: true }) return _connection;
+            _connection?.Dispose();
+            _connection = _factory.CreateConnection();
+                    
+            return _connection;
         }
-
-        return _connection;
     }
+    
+    private static readonly IEnumerable<TimeSpan> SleepsBetweenRetries = new List<TimeSpan>
+    {
+        TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3),
+        TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(8),
+    };
+    
+    private readonly RetryPolicy _retryPolicy = Policy
+        .Handle<Exception>()
+        .WaitAndRetry(sleepDurations: SleepsBetweenRetries);
 }

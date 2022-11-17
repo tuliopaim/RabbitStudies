@@ -1,53 +1,40 @@
 ﻿using Microsoft.Extensions.Logging;
-using RabbitMQ.Client;
 using RabbitStudies.Contracts;
+using RabbitStudies.Producer;
 using RabbitStudies.RabbitMq;
-using RabbitStudies.RabbitMq.Settings;
 
-var rabbitSettings = new RabbitMqSettings
-{
-    HostName = "localhost",
-    Port = 5672,
-    UserName = "guest",
-    Password = "guest",
-    RetrySettings = new()
-    {
-        Count = 3,
-        DurationInSeconds = 2,
-    }
-};
-
-var loggerFactory = new LoggerFactory();
-var logger = new Logger<RabbitMqProducer>(loggerFactory);
-
-var connectionFactory = new ConnectionFactory
-{
-    HostName = rabbitSettings.HostName,
-    Port = rabbitSettings.Port,
-    UserName = rabbitSettings.UserName,
-    Password = rabbitSettings.Password,
-    DispatchConsumersAsync = true,
-    ConsumerDispatchConcurrency = 1,
-    UseBackgroundThreadsForIO = false
-};
+var connectionFactory = RabbitMqConnectionFactory.ConnectionFactory;
 
 var rabbitMqConnection = new RabbitMqConnection(connectionFactory);
-var rabbitProducer = new RabbitMqProducer(rabbitMqConnection, logger);
+var rabbitProducer = new RabbitMqProducer(
+    rabbitMqConnection, 
+    new Logger<RabbitMqProducer>(new LoggerFactory())); 
 
-Console.WriteLine("Rabbit producer, press any key to produce a HelloWorldMessage");
+Console.WriteLine("Rabbit producer started");
+var messageQuantity = GetMessageQuantity();
 
-var messageIndex = 0;
-
-while (true)
+for (var messageIndex = 0; messageIndex < messageQuantity; messageIndex++)
 {
-    //Console.ReadKey();
+    rabbitProducer.Publish(new HelloWorldMessage(), MessageType.HELLO_WORLD, "QUEUE_A");
+}
 
-    var message = new HelloWorldMessage();
+Console.WriteLine($"All messages published");
 
-    var published = rabbitProducer.Publish(message, MessageType.HELLO_WORLD, "QUEUE_A");
 
-    if (published)
+int GetMessageQuantity()
+{
+    while (true)
     {
-        Console.WriteLine($"Message {++messageIndex} produced Id: {message.Id}");
+        Console.WriteLine("Generate how many messages?");
+        var messagesQtyStr = Console.ReadLine();
+        
+        if (int.TryParse(messagesQtyStr, out var messagesQty))
+        {
+            return messagesQty;
+        }
+        
+        Console.WriteLine("Wrong input...");
     }
 }
+
+

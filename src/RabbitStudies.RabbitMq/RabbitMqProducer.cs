@@ -9,38 +9,13 @@ public class RabbitMqProducer
     private readonly RabbitMqConnection _rabbitConnection;
     private readonly ILogger<RabbitMqProducer> _logger;
 
-    private readonly object _locker = new();
-
     public RabbitMqProducer(RabbitMqConnection rabbitConnection, ILogger<RabbitMqProducer> logger)
     {
         _rabbitConnection = rabbitConnection;
         _logger = logger;
-
-        _channel = ObterChannel();
     }
 
-    private IConnection Conexao => _rabbitConnection.Connection;
-
-    private IModel _channel;
-    private IModel Channel => ObterChannel();
-
-    private IModel ObterChannel()
-    {
-        if (_channel is not { IsOpen: true })
-        {
-            lock (_locker)
-            {
-                if (_channel is not { IsOpen: true })
-                {
-                    _channel?.Dispose();
-                    _channel = Conexao.CreateModel();
-                    return _channel;
-                }
-            }
-        }
-
-        return _channel;
-    }
+    private IConnection Connection => _rabbitConnection.Connection;
 
     public bool Publish<TMessage>
         (TMessage message, MessageType messageType, string routingKey)
@@ -56,14 +31,16 @@ public class RabbitMqProducer
     {
         try
         {
+            var channel = Connection.CreateModel();
+            
             var mensagemBytes = Encoding.UTF8.GetBytes(serializedMessage);
 
-            var propriedades = Channel.CreateBasicProperties();
+            var propriedades = channel.CreateBasicProperties();
 
             propriedades.Persistent = true;
             propriedades.CreateRetryCountHeader();
-
-            _channel.BasicPublish("",
+            
+            channel.BasicPublish("",
                 routingKey,
                 propriedades,
                 mensagemBytes);
@@ -74,7 +51,7 @@ public class RabbitMqProducer
         {
             _logger.LogError(ex, "Exception captured on {Method} - {@DataPublished}",
                 nameof(PublishMessage), new { serializedMessage, routingKey });
-
+            
             return false;
         }
     }
