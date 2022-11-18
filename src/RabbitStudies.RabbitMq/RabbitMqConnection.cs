@@ -7,22 +7,21 @@ namespace RabbitStudies.RabbitMq;
 public class RabbitMqConnection
 {
     private readonly IConnectionFactory _factory;
-    private readonly object _connectionLocker = new();
-
-    private IConnection _connection;
+    private static readonly object ConnectionLocker = new();
 
     public RabbitMqConnection(IConnectionFactory factory)
     {
         _factory = factory;
-        _connection = ObterConexao();
+        _connection = GetConnection();
     }
 
-    public IConnection Connection => _retryPolicy.Execute(ObterConexao);
+    private IConnection _connection;
+    public IConnection Connection => _retryPolicy.Execute(GetConnection);
 
-    private IConnection ObterConexao()
+    private IConnection GetConnection()
     {
         if (_connection is { IsOpen: true }) return _connection;
-        lock (_connectionLocker)
+        lock (ConnectionLocker)
         {
             if (_connection is { IsOpen: true }) return _connection;
             _connection?.Dispose();
@@ -34,8 +33,9 @@ public class RabbitMqConnection
     
     private static readonly IEnumerable<TimeSpan> SleepsBetweenRetries = new List<TimeSpan>
     {
-        TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3),
-        TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(8),
+        TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), 
+        TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(5),
+        TimeSpan.FromSeconds(8),
     };
     
     private readonly RetryPolicy _retryPolicy = Policy
