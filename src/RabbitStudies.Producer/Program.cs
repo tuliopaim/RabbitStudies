@@ -1,16 +1,15 @@
-﻿using RabbitMQ.Client;
-using RabbitStudies.Contracts;
+﻿using RabbitStudies.Contracts;
 using RabbitStudies.Producer;
 using RabbitStudies.RabbitMq;
 
 var connectionFactory = RabbitMqConnectionFactory.ConnectionFactory;
 
-var rabbitMqConnectionPool = new RabbitMqConnectionPool(connectionFactory);
+var rabbitMqConnection = new RabbitMqConnection(connectionFactory);
 
 Console.WriteLine("Rabbit producer started");
 var messageQuantity = GetMessageQuantity();
 
-PublishMessages(messageQuantity, rabbitMqConnectionPool);
+PublishMessages(messageQuantity, rabbitMqConnection);
 //await ParalelPublishMessages(messageQuantity, rabbitMqConnection);
 
 Console.WriteLine($"All messages published");
@@ -31,7 +30,7 @@ int GetMessageQuantity()
     }
 }
 
-void PublishMessages(int i, RabbitMqConnectionPool connectionPool)
+void PublishMessages(int i, RabbitMqConnection connectionPool)
 {
     for (var messageIndex = 0; messageIndex < i; messageIndex++)
     {
@@ -42,7 +41,7 @@ void PublishMessages(int i, RabbitMqConnectionPool connectionPool)
     }
 }
 
-Task ParalelPublishMessages(int i, RabbitMqConnectionPool connectionPool)
+Task ParalelPublishMessages(int i, RabbitMqConnection connectionPool)
 {
     var tasks = new List<Task>();
     for (var messageIndex = 0; messageIndex < i; messageIndex++)
@@ -58,5 +57,3 @@ Task ParalelPublishMessages(int i, RabbitMqConnectionPool connectionPool)
 
     return Task.WhenAll(tasks);
 }
-
-

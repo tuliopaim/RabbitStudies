@@ -5,26 +5,29 @@ using Polly;
 using Polly.Retry;
 
 namespace RabbitStudies.RabbitMq;
-public static class RabbitMqProducer
+public static class RabbitMqProducerExtensions
 {
     public static void Publish<TMessage>(
-        this RabbitMqConnectionPool connection,
+        this RabbitMqConnection connection,
         TMessage message,
         MessageType messageType,
-        string routingKey)
+        string routingKey,
+        RetryPolicy? retryPolicy = null)
     {
         var serializedMessage = JsonConvert.SerializeObject(message);
 
         var messageBase = new RabbitMessage(serializedMessage, messageType);
 
-        RetryPolicy.Execute(() =>
+        retryPolicy ??= RetryPolicy;
+        
+        retryPolicy.Execute(() =>
         {
             connection.PublishMessage(JsonConvert.SerializeObject(messageBase), routingKey);
         });
     }
 
     private static void PublishMessage(
-        this RabbitMqConnectionPool connectionPool,
+        this RabbitMqConnection connectionPool,
         string serializedMessage,
         string routingKey)
     {
@@ -47,7 +50,6 @@ public static class RabbitMqProducer
     {
         TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), 
         TimeSpan.FromSeconds(3), TimeSpan.FromSeconds(5),
-        TimeSpan.FromSeconds(8),
     };
 
     private static  readonly RetryPolicy RetryPolicy = Policy
